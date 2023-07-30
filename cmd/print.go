@@ -107,8 +107,12 @@ func init() {
 	printCmd.Flags().Float32VarP(&imageSetting.Scale, "Scale", "s", 1.0, "Scale factor of the image, don't use with fitToPaper")
 	printCmd.Flags().BoolVarP(&imageSetting.FitToPaper, "FitToPaper", "a", false, "fit to paper")
 
-	printCmd.Flags().StringVarP((*string)(&printSetting.PageOrientation), "Orientation", "o", "", "Page Orientation")
+	printCmd.Flags().StringVarP((*string)(&printSetting.PageOrientation), "Orientation", "o", "", "Page Orientation, LANDSCAPE or PORTRAIT")
 	printCmd.Flags().Int16VarP(&printSetting.Copy, "Copy", "c", 0, "Copies of the document to print")
+	printCmd.Flags().Int32VarP(&printSetting.MarginLeft, "MarginLeft", "", 0, "MarginLeft, Unit in mm. Top-Left alignment used by default, So only Top and Left margin is needed.")
+	printCmd.Flags().Int32VarP(&printSetting.MarginRight, "MarginRight", "", 0, "MarginRight, unit in mm")
+	printCmd.Flags().Int32VarP(&printSetting.MarginTop, "MarginTop", "", 0, "MarginTop, unit in mm")
+	printCmd.Flags().Int32VarP(&printSetting.MarginBottom, "MarginBottom", "", 0, "MarginBottom, unit in mm")
 
 	printCmd.MarkFlagRequired("printer")
 	printCmd.MarkFlagRequired("file")

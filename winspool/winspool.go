@@ -82,9 +82,15 @@ func ImageDataToPrinter(printerName, docName string, imageData image.Image, imag
 	// Set device to zero offset, and to points scale.
 	xDPI := hDC.GetDeviceCaps(LOGPIXELSX)
 	yDPI := hDC.GetDeviceCaps(LOGPIXELSY)
+
+	// Not sure if this is the right way to calculate the margin
 	xMarginPixels := hDC.GetDeviceCaps(PHYSICALOFFSETX)
 	yMarginPixels := hDC.GetDeviceCaps(PHYSICALOFFSETY)
-	xform := NewXFORM(float32(xDPI)/float32(imageSetting.PPI), float32(yDPI)/float32(imageSetting.PPI), float32(-xMarginPixels), float32(-yMarginPixels))
+
+	xMarginPixels = printerSetting.MarginLeft*xDPI*10/254 - xMarginPixels
+	yMarginPixels = printerSetting.MarginTop*xDPI*10/254 - yMarginPixels
+
+	xform := NewXFORM(float32(xDPI)/float32(imageSetting.PPI), float32(yDPI)/float32(imageSetting.PPI), float32(xMarginPixels), float32(yMarginPixels))
 
 	if err := hDC.SetGraphicsMode(GM_ADVANCED); err != nil {
 		hDC.DeleteDC()
@@ -110,8 +116,17 @@ func ImageDataToPrinter(printerName, docName string, imageData image.Image, imag
 		bounds := imageData.Bounds()
 		wPaperPixels := hDC.GetDeviceCaps(PHYSICALWIDTH)
 		hPaperPixels := hDC.GetDeviceCaps(PHYSICALHEIGHT)
+
 		wPrintablePixels := hDC.GetDeviceCaps(HORZRES)
 		hPrintablePixels := hDC.GetDeviceCaps(VERTRES)
+
+		// Calculated the printable area in pixels by Margin
+		wCPrintablePixels := wPaperPixels - (printerSetting.MarginLeft+printerSetting.MarginRight)*xDPI*10/254
+		hCPrintablePixels := wPaperPixels - (printerSetting.MarginTop+printerSetting.MarginBottom)*yDPI*10/254
+
+		wPrintablePixels = min(wPrintablePixels, wCPrintablePixels)
+		hPrintablePixels = min(hPrintablePixels, hCPrintablePixels)
+
 		w := bounds.Dx()
 		h := bounds.Dy()
 
@@ -150,6 +165,13 @@ func ImageDataToPrinter(printerName, docName string, imageData image.Image, imag
 	hDC.DeleteDC()
 
 	return jobID, err
+}
+
+func min(a, b int32) int32 {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func getManModel(driverName string) (man string, model string) {
