@@ -120,6 +120,14 @@ func ImageDataToPrinter(printerName, docName string, imageData image.Image, imag
 		newH := int(float64(h) * scale)
 
 		imageData = transform.Resize(imageData, newW, newH, transform.Gaussian)
+	} else if imageSetting.Scale != 1.0 {
+		bounds := imageData.Bounds()
+		w := bounds.Dx()
+		h := bounds.Dy()
+		newW := int(float64(w) * float64(imageSetting.Scale))
+		newH := int(float64(h) * float64(imageSetting.Scale))
+
+		imageData = transform.Resize(imageData, newW, newH, transform.Gaussian)
 	}
 
 	bounds := imageData.Bounds()
@@ -580,6 +588,10 @@ func GetPrinters() ([]model.Printer, error) {
 
 type PrinterSetting struct {
 	PageOrientation model.PageOrientationType
+	MarginLeft      int32
+	MarginTop       int32
+	MarginRight     int32
+	MarginBottom    int32
 	Copy            int16
 }
 
