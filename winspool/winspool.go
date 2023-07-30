@@ -11,6 +11,11 @@ import (
 	"github.com/anthonynsimon/bild/transform"
 )
 
+var pageOrientationByType = map[model.PageOrientationType]int16{
+	model.PageOrientationPortrait:  DMORIENT_PORTRAIT,
+	model.PageOrientationLandscape: DMORIENT_LANDSCAPE,
+}
+
 func RawDataToPrinter(printerName, docName string, data []byte) (int32, error) {
 	var count uint32 = 0
 	var jobID int32 = 0
@@ -42,8 +47,7 @@ func RawDataToPrinter(printerName, docName string, data []byte) (int32, error) {
 	return jobID, err
 }
 
-func ImageDataToPrinter(printerName, docName string, imageData image.Image,
-	rotation, ppi int32, fitTPaper bool) (int32, error) {
+func ImageDataToPrinter(printerName, docName string, imageData image.Image, imageSetting ImageSetting, printerSetting PrinterSetting) (int32, error) {
 	hPrinter, err := OpenPrinter(printerName)
 	if err != nil {
 		return 0, err
@@ -53,6 +57,8 @@ func ImageDataToPrinter(printerName, docName string, imageData image.Image,
 		hPrinter.ClosePrinter()
 		return 0, err
 	}
+
+	printerSetting.Apply(devMode)
 
 	if err = hPrinter.DocumentPropertiesSet(printerName, devMode); err != nil {
 		hPrinter.ClosePrinter()
@@ -78,7 +84,7 @@ func ImageDataToPrinter(printerName, docName string, imageData image.Image,
 	yDPI := hDC.GetDeviceCaps(LOGPIXELSY)
 	xMarginPixels := hDC.GetDeviceCaps(PHYSICALOFFSETX)
 	yMarginPixels := hDC.GetDeviceCaps(PHYSICALOFFSETY)
-	xform := NewXFORM(float32(xDPI)/float32(ppi), float32(yDPI)/float32(ppi), float32(-xMarginPixels), float32(-yMarginPixels))
+	xform := NewXFORM(float32(xDPI)/float32(imageSetting.PPI), float32(yDPI)/float32(imageSetting.PPI), float32(-xMarginPixels), float32(-yMarginPixels))
 
 	if err := hDC.SetGraphicsMode(GM_ADVANCED); err != nil {
 		hDC.DeleteDC()
@@ -94,13 +100,13 @@ func ImageDataToPrinter(printerName, docName string, imageData image.Image,
 		return 0, err
 	}
 
-	if rotation != 0 {
+	if imageSetting.Rotation != 0 {
 		// Rotate the image through Image API, but maybe we should cnsider to change printer orientation
-		imageData = transform.Rotate(imageData, float64(rotation),
+		imageData = transform.Rotate(imageData, float64(imageSetting.Rotation),
 			&transform.RotationOptions{ResizeBounds: true, Pivot: &image.Point{0, 0}})
 	}
 
-	if fitTPaper {
+	if imageSetting.FitToPaper {
 		bounds := imageData.Bounds()
 		wPaperPixels := hDC.GetDeviceCaps(PHYSICALWIDTH)
 		hPaperPixels := hDC.GetDeviceCaps(PHYSICALHEIGHT)
@@ -109,7 +115,7 @@ func ImageDataToPrinter(printerName, docName string, imageData image.Image,
 		w := bounds.Dx()
 		h := bounds.Dy()
 
-		scale := getScale(int32(w), int32(h), wPrintablePixels, hPrintablePixels, wPaperPixels, hPaperPixels, xDPI, yDPI, ppi)
+		scale := getScale(int32(w), int32(h), wPrintablePixels, hPrintablePixels, wPaperPixels, hPaperPixels, xDPI, yDPI, imageSetting.PPI)
 		newW := int(float64(w) * scale)
 		newH := int(float64(h) * scale)
 
@@ -570,4 +576,25 @@ func GetPrinters() ([]model.Printer, error) {
 	}
 
 	return printers, nil
+}
+
+type PrinterSetting struct {
+	PageOrientation model.PageOrientationType
+	Copy            int16
+}
+
+func (p PrinterSetting) Apply(devMode *DevMode) {
+	if pageOrientation, ok := pageOrientationByType[p.PageOrientation]; ok {
+		devMode.SetOrientation(pageOrientation)
+	}
+	if p.Copy > 0 {
+		devMode.SetCopies(int16(p.Copy))
+	}
+}
+
+type ImageSetting struct {
+	PPI        int32
+	Rotation   int32
+	Scale      float32
+	FitToPaper bool
 }
