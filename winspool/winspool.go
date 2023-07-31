@@ -122,7 +122,7 @@ func ImageDataToPrinter(printerName, docName string, imageData image.Image, imag
 
 		// Calculated the printable area in pixels by Margin
 		wCPrintablePixels := wPaperPixels - (printerSetting.MarginLeft+printerSetting.MarginRight)*xDPI*10/254
-		hCPrintablePixels := wPaperPixels - (printerSetting.MarginTop+printerSetting.MarginBottom)*yDPI*10/254
+		hCPrintablePixels := hPaperPixels - (printerSetting.MarginTop+printerSetting.MarginBottom)*yDPI*10/254
 
 		wPrintablePixels = min(wPrintablePixels, wCPrintablePixels)
 		hPrintablePixels = min(hPrintablePixels, hCPrintablePixels)
